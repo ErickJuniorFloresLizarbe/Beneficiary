@@ -32,6 +32,7 @@ public class PersonController {
         return personService.getPersonsByTypeKinshipAndState(typeKinship, state);
     }
 
+
     //LISTADO DE SOLO APADRINADOS
     @GetMapping("/filter-sponsored")
     public Flux<PersonDTO> getPersonsBySponsoredAndState(
@@ -63,7 +64,7 @@ public class PersonController {
     public Mono<Void> updatePerson(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {
         return personService.updatePersonWithNewIds(personDTO);
     }
-
+    
     //EDITAR DATOS PERSONALES SIN GENERAR NUEVO ID
     @PutMapping("/{id}/update-person")
     public Mono<Void> updatePersonData(@PathVariable Integer id, @RequestBody PersonDTO personDTO) {

@@ -5,14 +5,14 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import pe.edu.vallegrande.beneficiary.dto.PersonDTO;
 import pe.edu.vallegrande.beneficiary.dto.HealthDTO;
 import pe.edu.vallegrande.beneficiary.dto.EducationDTO;
 import pe.edu.vallegrande.beneficiary.model.Person;
 import pe.edu.vallegrande.beneficiary.model.Education;
 import pe.edu.vallegrande.beneficiary.model.Health;
-import pe.edu.vallegrande.beneficiary.repository.EducationRepository;
-import pe.edu.vallegrande.beneficiary.repository.HealthRepository;
 import pe.edu.vallegrande.beneficiary.repository.PersonRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -23,94 +23,99 @@ public class PersonService {
     @Autowired
     private PersonRepository personRepository;
 
-    @Autowired
-    private EducationRepository educationRepository;
 
     @Autowired
-    private HealthRepository healthRepository;
+    private WebClient.Builder webClientBuilder;
 
-    //LISTADO DE BENEFICIARIOS ACTIVOS Y INACTIVOS
+ 
+    // LISTADO DE BENEFICIARIOS ACTIVOS Y INACTIVOS
     public Flux<PersonDTO> getPersonsByTypeKinshipAndState(String typeKinship, String state) {
         return personRepository.findByTypeKinshipAndState(typeKinship, state)
                 .map(this::convertToDTO);
     }
 
-    //LISTADO DE APADRINADOS ACTIVOS Y INACTIVOS
+    // LISTADO DE APADRINADOS ACTIVOS Y INACTIVOS
     public Flux<PersonDTO> getPersonsBySponsoredAndState(String sponsored, String state) {
         return personRepository.findBySponsoredAndState(sponsored, state)
                 .map(this::convertToDTO);
     }
 
-    //LISTADO COMPLETOS DE BENEFICIARIOS POR ID
-     public Mono<PersonDTO> getPersonByIdWithDetails(Integer id) {
+    // LISTADO COMPLETOS DE BENEFICIARIOS POR ID
+    public Mono<PersonDTO> getPersonByIdWithDetails(Integer id) {
         return personRepository.findById(id)
                 .flatMap(person -> {
                     PersonDTO dto = convertToDTO(person);
-                    return educationRepository.findByPersonId(person.getIdPerson())
-                            .collectList()
-                            .flatMap(educationList -> {
-                                // Convierte la lista de Education a EducationDTO
-                                List<EducationDTO> educationDTOList = educationList.stream()
-                                        .map(this::convertToEducationDTO)
-                                        .collect(Collectors.toList());
-                                dto.setEducation(educationDTOList);
-                                return healthRepository.findByPersonId(person.getIdPerson())
-                                        .collectList()
-                                        .map(healthList -> {
-                                            // Convierte la lista de Health a HealthDTO
-                                            List<HealthDTO> healthDTOList = healthList.stream()
-                                                    .map(this::convertToHealthDTO)
-                                                    .collect(Collectors.toList());
-                                            dto.setHealth(healthDTOList);
-                                            return dto;
-                                        });
+    
+                    Mono<List<EducationDTO>> educationMono = webClientBuilder.build()
+                            .get()
+                            .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/person/" + person.getIdPerson())
+                            .retrieve()
+                            .bodyToFlux(EducationDTO.class)
+                            .collectList();
+    
+                    Mono<List<HealthDTO>> healthMono = webClientBuilder.build()
+                            .get()
+                            .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/person/" + person.getIdPerson())
+                            .retrieve()
+                            .bodyToFlux(HealthDTO.class)
+                            .collectList();
+    
+                    return Mono.zip(educationMono, healthMono)
+                            .map(tuple -> {
+                                dto.setEducation(tuple.getT1());
+                                dto.setHealth(tuple.getT2());
+                                return dto;
                             });
                 });
     }
+    
 
-    //ELIMINADO LOGICO
+    // ELIMINADO LOGICO
     public Mono<Void> deletePerson(Integer id) {
         return personRepository.updateStateById(id, "I")
                 .then();
     }
 
-    //RESTAURADO LOGICO
+    // RESTAURADO LOGICO
     public Mono<Void> restorePerson(Integer id) {
         return personRepository.updateStateById(id, "A")
                 .then();
     }
 
-     //ACTUALIZA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
+    // ACTUALIZA LOS REGISTROS DE EDUCATION Y HEALTH CON NUEVO IDS
     public Mono<Void> updatePersonWithNewIds(PersonDTO personDTO) {
-        return Mono.when(
-                personRepository.updateStateById(personDTO.getIdPerson(), personDTO.getState()),
+        WebClient webClient = webClientBuilder.build();
     
-                // Verificar si se proporcionaron datos de education
-                personDTO.getEducation() != null && !personDTO.getEducation().isEmpty() ?
-                        educationRepository.insertEducation(
-                                personDTO.getEducation().get(0).getDegreeStudy(),
-                                personDTO.getEducation().get(0).getGradeBook(),
-                                personDTO.getEducation().get(0).getGradeAverage(),
-                                personDTO.getEducation().get(0).getFullNotebook(),
-                                personDTO.getEducation().get(0).getAssistance(),
-                                personDTO.getEducation().get(0).getTutorials(),
-                                personDTO.getIdPerson()
-                        ) : Mono.empty(),
+      
+        Mono<Void> educationUpdate = Mono.empty();
+        if (personDTO.getEducation() != null && !personDTO.getEducation().isEmpty()) {
+            EducationDTO education = personDTO.getEducation().get(0);
     
-                // Verificar si se proporcionaron datos de health
-                personDTO.getHealth() != null && !personDTO.getHealth().isEmpty() ?
-                        healthRepository.insertHealth(
-                                personDTO.getHealth().get(0).getVaccine(),
-                                personDTO.getHealth().get(0).getVph(),
-                                personDTO.getHealth().get(0).getInfluenza(),
-                                personDTO.getHealth().get(0).getDeworming(),
-                                personDTO.getHealth().get(0).getHemoglobin(),
-                                personDTO.getIdPerson()
-                        ) : Mono.empty()
-        ).then();
+            educationUpdate = webClient.put()
+                .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/update/" + education.getIdEducation())
+                .bodyValue(education)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorMap(e -> new RuntimeException("Error al actualizar educación: " + e.getMessage()));
+        }
+    
+        Mono<Void> healthUpdate = Mono.empty();
+        if (personDTO.getHealth() != null && !personDTO.getHealth().isEmpty()) {
+                HealthDTO health = personDTO.getHealth().get(0); 
+    
+                healthUpdate = webClient.put()
+                    .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/update/" + health.getIdHealth())
+                    .bodyValue(health)
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .onErrorMap(e -> new RuntimeException("Error al actualizar salud: " + e.getMessage()));
+        }
+    
+        return Mono.when( educationUpdate, healthUpdate).then();
     }
+    
 
-    //EDITAR DATOS PERSONALES SIN GENERAR NUEVO ID
+    // EDITAR DATOS PERSONALES SIN GENERAR NUEVO ID
     public Mono<Void> updatePersonData(PersonDTO personDTO) {
         return personRepository.updatePerson(
                 personDTO.getIdPerson(),
@@ -123,39 +128,45 @@ public class PersonService {
                 personDTO.getTypeKinship(),
                 personDTO.getSponsored(),
                 personDTO.getState(),
-                personDTO.getFamilyId()
-        ).then();
+                personDTO.getFamilyId()).then();
     }
 
-    //MODIFICA EDUCATION Y HEALT SIN GENERAR UN NUEVO ID
+    // MODIFICA EDUCATION Y HEALT SIN GENERAR UN NUEVO ID
     public Mono<Void> correctEducationAndHealth(PersonDTO personDTO) {
-        return Mono.when(
-                // Verificar si se proporcionaron datos de education y actualizar
-                personDTO.getEducation() != null && !personDTO.getEducation().isEmpty() ?
-                        educationRepository.updateEducation(
-                                personDTO.getEducation().get(0).getIdEducation(),
-                                personDTO.getEducation().get(0).getDegreeStudy(),
-                                personDTO.getEducation().get(0).getGradeBook(),
-                                personDTO.getEducation().get(0).getGradeAverage(),
-                                personDTO.getEducation().get(0).getFullNotebook(),
-                                personDTO.getEducation().get(0).getAssistance(),
-                                personDTO.getEducation().get(0).getTutorials()
-                        ) : Mono.empty(),
+        WebClient webClient = webClientBuilder.build();
     
-                // Verificar si se proporcionaron datos de health y actualizar
-                personDTO.getHealth() != null && !personDTO.getHealth().isEmpty() ?
-                        healthRepository.updateHealth(
-                                personDTO.getHealth().get(0).getIdHealth(),
-                                personDTO.getHealth().get(0).getVaccine(),
-                                personDTO.getHealth().get(0).getVph(),
-                                personDTO.getHealth().get(0).getInfluenza(),
-                                personDTO.getHealth().get(0).getDeworming(),
-                                personDTO.getHealth().get(0).getHemoglobin()
-                        ) : Mono.empty()
-        ).then();
+        Mono<Void> updateEducationMono = Mono.empty();
+    
+        if (personDTO.getEducation() != null && !personDTO.getEducation().isEmpty()) {
+            EducationDTO education = personDTO.getEducation().get(0); // Usamos el nombre correcto
+    
+            updateEducationMono = webClient.put()
+                .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/update/" + education.getIdEducation())
+                .bodyValue(education)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorMap(e -> new RuntimeException("Error al actualizar educación: " + e.getMessage()));
+        }
+    
+        Mono<Void> updateHealthMono = Mono.empty();
+    
+        if (personDTO.getHealth() != null && !personDTO.getHealth().isEmpty()) {
+               HealthDTO health = personDTO.getHealth().get(0); 
+    
+                updateHealthMono = webClient.put()
+                    .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/update/" + health.getIdHealth())
+                    .bodyValue(health)
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .onErrorMap(e -> new RuntimeException("Error al actualizar salud: " + e.getMessage()));
+            
+        }
+    
+        return Mono.when(updateEducationMono, updateHealthMono).then();
     }
+    
 
-    //REGISTRA NUEVA PERSONA CON SUS DATOS DE EDUCATION Y HEALTH
+    // REGISTRA NUEVA PERSONA CON SUS DATOS DE EDUCATION Y HEALTH
     public Mono<Void> registerPerson(PersonDTO personDTO) {
         return personRepository.insertPerson(
                 personDTO.getName(),
@@ -167,34 +178,42 @@ public class PersonService {
                 personDTO.getTypeKinship(),
                 personDTO.getSponsored(),
                 personDTO.getState(),
-                personDTO.getFamilyId()
-        ).then(personRepository.getLastInsertedId())  // 🔹 Obtener el ID después de la inserción
-        .flatMap(personId -> 
-            Flux.concat(
-                Flux.fromIterable(personDTO.getEducation())
-                    .flatMap(edu -> educationRepository.insertEducation(
-                        edu.getDegreeStudy(), 
-                        edu.getGradeBook(), 
-                        edu.getGradeAverage(),
-                        edu.getFullNotebook(), 
-                        edu.getAssistance(), 
-                        edu.getTutorials(), 
-                        personId
-                    )),
-                Flux.fromIterable(personDTO.getHealth())
-                    .flatMap(health -> healthRepository.insertHealth(
-                        health.getVaccine(), 
-                        health.getVph(), 
-                        health.getInfluenza(),
-                        health.getDeworming(), 
-                        health.getHemoglobin(), 
-                        personId
-                    ))
-            ).then()
-        );
+                personDTO.getFamilyId())
+            .then(personRepository.getLastInsertedId()) 
+            .flatMap(personId -> {
+    
+                Flux<Mono<Void>> educationRequests = Flux.fromIterable(personDTO.getEducation())
+                    .map(edu -> {
+                        edu.setPersonId(personId);
+                        return webClientBuilder.build()
+                            .post()
+                            .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education")
+                            .bodyValue(edu)
+                            .retrieve()
+                            .bodyToMono(Void.class)
+                            .onErrorMap(e -> new RuntimeException("Error al registrar educación: " + e.getMessage()));
+                    });
+    
+                Flux<Mono<Void>> healthRequests = Flux.fromIterable(personDTO.getHealth())
+                    .map(health -> {
+                        health.setPersonId(personId);
+                        return webClientBuilder.build()
+                            .post()
+                            .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health") 
+                            .bodyValue(health)
+                            .retrieve()
+                            .bodyToMono(Void.class)
+                            .onErrorMap(e -> new RuntimeException("Error al registrar salud: " + e.getMessage()));
+                    });
+    
+                return Flux.merge(educationRequests)
+                        .thenMany(Flux.merge(healthRequests))
+                        .then();
+            });
     }
     
-
+    
+    
 
     private PersonDTO convertToDTO(Person person) {
         PersonDTO dto = new PersonDTO();
