@@ -1,7 +1,7 @@
 package pe.edu.vallegrande.beneficiary.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+//import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,14 +11,16 @@ import pe.edu.vallegrande.beneficiary.dto.PersonDTO;
 import pe.edu.vallegrande.beneficiary.dto.HealthDTO;
 import pe.edu.vallegrande.beneficiary.dto.EducationDTO;
 import pe.edu.vallegrande.beneficiary.model.Person;
-import pe.edu.vallegrande.beneficiary.model.Education;
-import pe.edu.vallegrande.beneficiary.model.Health;
 import pe.edu.vallegrande.beneficiary.repository.PersonRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
 public class PersonService {
+
+    private static final String EDUCATION_SERVICE_BASE_URL = "http://localhost:8080";
+    private static final String HEALTH_SERVICE_BASE_URL = "http://localhost:8086";
+
 
     @Autowired
     private PersonRepository personRepository;
@@ -48,14 +50,14 @@ public class PersonService {
     
                     Mono<List<EducationDTO>> educationMono = webClientBuilder.build()
                             .get()
-                            .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/person/" + person.getIdPerson())
+                            .uri(EDUCATION_SERVICE_BASE_URL + "/education/person/" + person.getIdPerson())
                             .retrieve()
                             .bodyToFlux(EducationDTO.class)
                             .collectList();
     
                     Mono<List<HealthDTO>> healthMono = webClientBuilder.build()
                             .get()
-                            .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/person/" + person.getIdPerson())
+                            .uri(HEALTH_SERVICE_BASE_URL + "/health/person/" + person.getIdPerson())
                             .retrieve()
                             .bodyToFlux(HealthDTO.class)
                             .collectList();
@@ -92,7 +94,7 @@ public class PersonService {
             EducationDTO education = personDTO.getEducation().get(0);
     
             educationUpdate = webClient.put()
-                .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/update/" + education.getIdEducation())
+                .uri(EDUCATION_SERVICE_BASE_URL + "/education/update/" + education.getIdEducation())
                 .bodyValue(education)
                 .retrieve()
                 .bodyToMono(Void.class)
@@ -104,7 +106,7 @@ public class PersonService {
                 HealthDTO health = personDTO.getHealth().get(0); 
     
                 healthUpdate = webClient.put()
-                    .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/update/" + health.getIdHealth())
+                    .uri( HEALTH_SERVICE_BASE_URL + "/health/update/" + health.getIdHealth())
                     .bodyValue(health)
                     .retrieve()
                     .bodyToMono(Void.class)
@@ -141,7 +143,7 @@ public class PersonService {
             EducationDTO education = personDTO.getEducation().get(0); // Usamos el nombre correcto
     
             updateEducationMono = webClient.put()
-                .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education/update/" + education.getIdEducation())
+                .uri(EDUCATION_SERVICE_BASE_URL + "/education/update/" + education.getIdEducation())
                 .bodyValue(education)
                 .retrieve()
                 .bodyToMono(Void.class)
@@ -154,7 +156,7 @@ public class PersonService {
                HealthDTO health = personDTO.getHealth().get(0); 
     
                 updateHealthMono = webClient.put()
-                    .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health/update/" + health.getIdHealth())
+                    .uri(HEALTH_SERVICE_BASE_URL + "/health/update/" + health.getIdHealth())
                     .bodyValue(health)
                     .retrieve()
                     .bodyToMono(Void.class)
@@ -187,7 +189,7 @@ public class PersonService {
                         edu.setPersonId(personId);
                         return webClientBuilder.build()
                             .post()
-                            .uri("https://xcc4gz6h-8080.brs.devtunnels.ms/education")
+                            .uri(EDUCATION_SERVICE_BASE_URL + "/education")
                             .bodyValue(edu)
                             .retrieve()
                             .bodyToMono(Void.class)
@@ -199,7 +201,7 @@ public class PersonService {
                         health.setPersonId(personId);
                         return webClientBuilder.build()
                             .post()
-                            .uri("https://xcc4gz6h-8086.brs.devtunnels.ms/health") 
+                            .uri(HEALTH_SERVICE_BASE_URL + "/health") 
                             .bodyValue(health)
                             .retrieve()
                             .bodyToMono(Void.class)
@@ -231,28 +233,4 @@ public class PersonService {
         return dto;
     }
 
-    private EducationDTO convertToEducationDTO(Education education) {
-        EducationDTO dto = new EducationDTO();
-        dto.setIdEducation(education.getIdEducation());
-        dto.setDegreeStudy(education.getDegreeStudy());
-        dto.setGradeBook(education.getGradeBook());
-        dto.setGradeAverage(education.getGradeAverage());
-        dto.setFullNotebook(education.getFullNotebook());
-        dto.setAssistance(education.getAssistance());
-        dto.setTutorials(education.getTutorials());
-        dto.setPersonId(education.getPersonId());
-        return dto;
-    }
-
-    private HealthDTO convertToHealthDTO(Health health) {
-        HealthDTO dto = new HealthDTO();
-        dto.setIdHealth(health.getIdHealth());
-        dto.setVaccine(health.getVaccine());
-        dto.setVph(health.getVph());
-        dto.setInfluenza(health.getInfluenza());
-        dto.setDeworming(health.getDeworming());
-        dto.setHemoglobin(health.getHemoglobin());
-        dto.setPersonId(health.getPersonId());
-        return dto;
-    }
 }
