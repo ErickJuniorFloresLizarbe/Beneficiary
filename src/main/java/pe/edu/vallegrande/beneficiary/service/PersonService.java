@@ -18,8 +18,8 @@ import reactor.core.publisher.Mono;
 @Service
 public class PersonService {
 
-    private static final String EDUCATION_SERVICE_BASE_URL = "http://localhost:8080";
-    private static final String HEALTH_SERVICE_BASE_URL = "http://localhost:8086";
+    private static final String EDUCATION_SERVICE_BASE_URL = "https://xcc4gz6h-8080.brs.devtunnels.ms";
+    private static final String HEALTH_SERVICE_BASE_URL = "https://congenial-xylophone-69x56qqv5x624rg7-8087.app.github.dev";
 
 
     @Autowired
@@ -30,7 +30,6 @@ public class PersonService {
     private WebClient.Builder webClientBuilder;
 
  
-    // LISTADO DE BENEFICIARIOS ACTIVOS Y INACTIVOS
     public Flux<PersonDTO> getPersonsByTypeKinshipAndState(String typeKinship, String state) {
         return personRepository.findByTypeKinshipAndState(typeKinship, state)
                 .map(this::convertToDTO);
@@ -54,6 +53,7 @@ public class PersonService {
                             .retrieve()
                             .bodyToFlux(EducationDTO.class)
                             .collectList();
+                            
     
                     Mono<List<HealthDTO>> healthMono = webClientBuilder.build()
                             .get()
@@ -94,11 +94,14 @@ public class PersonService {
             EducationDTO education = personDTO.getEducation().get(0);
     
             educationUpdate = webClient.put()
-                .uri(EDUCATION_SERVICE_BASE_URL + "/education/update/" + education.getIdEducation())
+                .uri(EDUCATION_SERVICE_BASE_URL + "/education//update-with-history/" + education.getIdEducation())
                 .bodyValue(education)
                 .retrieve()
                 .bodyToMono(Void.class)
-                .onErrorMap(e -> new RuntimeException("Error al actualizar educación: " + e.getMessage()));
+                .onErrorResume(e -> {
+                    System.err.println("Error al registrar educación: " + e.getMessage());
+                    return Mono.empty(); 
+                });
         }
     
         Mono<Void> healthUpdate = Mono.empty();
@@ -106,11 +109,14 @@ public class PersonService {
                 HealthDTO health = personDTO.getHealth().get(0); 
     
                 healthUpdate = webClient.put()
-                    .uri( HEALTH_SERVICE_BASE_URL + "/health/update/" + health.getIdHealth())
+                    .uri( HEALTH_SERVICE_BASE_URL + "/health//update-with-history/" + health.getIdHealth())
                     .bodyValue(health)
                     .retrieve()
                     .bodyToMono(Void.class)
-                    .onErrorMap(e -> new RuntimeException("Error al actualizar salud: " + e.getMessage()));
+                    .onErrorResume(e -> {
+                        System.err.println("Error al registrar educación: " + e.getMessage());
+                        return Mono.empty(); 
+                    });
         }
     
         return Mono.when( educationUpdate, healthUpdate).then();
@@ -147,7 +153,10 @@ public class PersonService {
                 .bodyValue(education)
                 .retrieve()
                 .bodyToMono(Void.class)
-                .onErrorMap(e -> new RuntimeException("Error al actualizar educación: " + e.getMessage()));
+                .onErrorResume(e -> {
+                    System.err.println("Error al registrar educación: " + e.getMessage());
+                    return Mono.empty(); 
+                });
         }
     
         Mono<Void> updateHealthMono = Mono.empty();
@@ -160,7 +169,10 @@ public class PersonService {
                     .bodyValue(health)
                     .retrieve()
                     .bodyToMono(Void.class)
-                    .onErrorMap(e -> new RuntimeException("Error al actualizar salud: " + e.getMessage()));
+                    .onErrorResume(e -> {
+                        System.err.println("Error al registrar educación: " + e.getMessage());
+                        return Mono.empty(); 
+                    });
             
         }
     
@@ -193,7 +205,10 @@ public class PersonService {
                             .bodyValue(edu)
                             .retrieve()
                             .bodyToMono(Void.class)
-                            .onErrorMap(e -> new RuntimeException("Error al registrar educación: " + e.getMessage()));
+                            .onErrorResume(e -> {
+                                System.err.println("Error al registrar educación: " + e.getMessage());
+                                return Mono.empty();
+                            });
                     });
     
                 Flux<Mono<Void>> healthRequests = Flux.fromIterable(personDTO.getHealth())
@@ -205,7 +220,11 @@ public class PersonService {
                             .bodyValue(health)
                             .retrieve()
                             .bodyToMono(Void.class)
-                            .onErrorMap(e -> new RuntimeException("Error al registrar salud: " + e.getMessage()));
+                            .onErrorResume(e -> {
+                                System.err.println("Error al registrar educación: " + e.getMessage());
+                                return Mono.empty();
+                            });
+                            
                     });
     
                 return Flux.merge(educationRequests)
