@@ -1,0 +1,15 @@
+server:
+  port: 8085
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://ep-long-band-a88ih3nz-pooler.eastus2.azure.neon.tech/neondb?sslmode=require
+    username: neondb_owner
+    password: npg_3QfxSB8phuOH
+    show-sql: true
+
+  security:
+      oauth2:
+        resourceserver:
+          jwt:
+            issuer-uri: https://securetoken.google.com/prueba-5dd81
