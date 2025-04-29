@@ -9,7 +9,13 @@ spring:
     show-sql: true
 
   security:
-      oauth2:
-        resourceserver:
-          jwt:
-            issuer-uri: https://securetoken.google.com/prueba-5dd81
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://securetoken.google.com/security-prs1
+
+logging:
+  level:
+    root: INFO
+    org.springframework.kafka: DEBUG
+    pe.edu.vallegrande.report_service: DEBUG

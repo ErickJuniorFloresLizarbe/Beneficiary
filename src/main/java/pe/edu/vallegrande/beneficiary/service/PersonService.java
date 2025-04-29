@@ -1,7 +1,6 @@
 package pe.edu.vallegrande.beneficiary.service;
 
 import java.util.List;
-//import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,8 +17,8 @@ import reactor.core.publisher.Mono;
 @Service
 public class PersonService {
 
-    private static final String EDUCATION_SERVICE_BASE_URL = "https://xcc4gz6h-8080.brs.devtunnels.ms";
-    private static final String HEALTH_SERVICE_BASE_URL = "https://congenial-xylophone-69x56qqv5x624rg7-8087.app.github.dev";
+    private static final String EDUCATION_SERVICE_BASE_URL = "https://ms-education.onrender.com";
+    private static final String HEALTH_SERVICE_BASE_URL = "https://ms-health.onrender.com";
 
 
     @Autowired
