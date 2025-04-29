@@ -1,12 +1,10 @@
-spring:
-    application:
-      name: Health
-  
-    r2dbc:
-      url: r2dbc:postgresql://ep-long-band-a88ih3nz-pooler.eastus2.azure.neon.tech/neondb?sslmode=require
-      username: neondb_owner
-      password: npg_3QfxSB8phuOH
-  
-  server:
-    port: 8085
-  
+FROM openjdk:17-jdk-alpine
+
+WORKDIR /app
+
+EXPOSE 8085
+
+    
+ADD ./target/beneficiary-0.0.1-SNAPSHOT.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
