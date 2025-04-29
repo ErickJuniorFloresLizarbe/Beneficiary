@@ -3,9 +3,9 @@ server:
 
 spring:
   r2dbc:
-    url: r2dbc:postgresql://ep-long-band-a88ih3nz-pooler.eastus2.azure.neon.tech/neondb?sslmode=require
+    url: r2dbc:postgresql://ep-morning-cake-a46o3cf8-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
     username: neondb_owner
-    password: npg_3QfxSB8phuOH
+    password: npg_tGu4yQWLh9jb
     show-sql: true
 
   security:
@@ -13,6 +13,8 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://securetoken.google.com/security-prs1
+
+
 
 logging:
   level:
