@@ -1,4 +1,5 @@
 package pe.edu.vallegrande.beneficiary.dto;
+import java.time.LocalDate;
 import lombok.Data;
 
 @Data
