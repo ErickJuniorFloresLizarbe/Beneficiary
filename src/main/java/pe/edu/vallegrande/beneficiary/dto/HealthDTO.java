@@ -9,5 +9,6 @@ public class HealthDTO {
     private String influenza;
     private String deworming;
     private String hemoglobin;
+    private LocalDate applicationDate;
     private Integer personId;
 }
