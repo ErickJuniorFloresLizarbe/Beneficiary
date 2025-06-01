@@ -93,7 +93,7 @@ public class PersonService {
             EducationDTO education = personDTO.getEducation().get(0);
     
             educationUpdate = webClient.put()
-                .uri(EDUCATION_SERVICE_BASE_URL + "/education//update-with-history/" + education.getIdEducation())
+                .uri(EDUCATION_SERVICE_BASE_URL + "/education/update-with-history/" + education.getIdEducation())
                 .bodyValue(education)
                 .retrieve()
                 .bodyToMono(Void.class)
@@ -108,7 +108,7 @@ public class PersonService {
                 HealthDTO health = personDTO.getHealth().get(0); 
     
                 healthUpdate = webClient.put()
-                    .uri( HEALTH_SERVICE_BASE_URL + "/health//update-with-history/" + health.getIdHealth())
+                    .uri( HEALTH_SERVICE_BASE_URL + "/health/update-with-history/" + health.getIdHealth())
                     .bodyValue(health)
                     .retrieve()
                     .bodyToMono(Void.class)
