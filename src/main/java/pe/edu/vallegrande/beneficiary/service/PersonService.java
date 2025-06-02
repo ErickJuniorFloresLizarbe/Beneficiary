@@ -37,7 +37,8 @@ public class PersonService {
     // LISTADO DE APADRINADOS ACTIVOS Y INACTIVOS
     public Flux<PersonDTO> getPersonsBySponsoredAndState(String sponsored, String state) {
         return personRepository.findBySponsoredAndState(sponsored, state)
-                .map(this::convertToDTO);
+                .map(this::convertToDTO)
+                .filter(personDTO -> "HIJO".equals(personDTO.getTypeKinship())); // Filtro para solo HIJO
     }
 
     // LISTADO COMPLETOS DE BENEFICIARIOS POR ID
