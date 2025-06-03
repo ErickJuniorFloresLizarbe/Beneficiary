@@ -15,10 +15,10 @@ public class SwaggerConfig {
     public OpenAPI apiInfo() {
         return new OpenAPI()
                 .servers(Collections
-                        .singletonList(new Server().url("https://shiny-pancake-vxvg696x476fx696-8085.app.github.dev/")))
+                        .singletonList(new Server().url("https://silver-doodle-9p9q7r7pvqphpx46-8085.app.github.dev/")))
                 .info(new Info()
 
-                        .title("TRADUCTOR")
+                        .title("Beneficiarios")
                         .description("AS222S5_T03_be")
                         .version("1.0.0")
 
